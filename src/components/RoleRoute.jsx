@@ -3,14 +3,22 @@ import React, { useContext } from "react";
 import { Navigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 
-function PrivateRoute({ children }) {
+function RoleRoute({ children, allowedRoles }) {
   const { user, loading } = useContext(AuthContext);
 
   if (loading) {
     return <p style={{ padding: "20px" }}>Loading...</p>;
   }
 
-  return user ? children : <Navigate to="/login" />;
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+
+  if (!allowedRoles.includes(user.role)) {
+    return <Navigate to="/" />;
+  }
+
+  return children;
 }
 
-export default PrivateRoute;
+export default RoleRoute;

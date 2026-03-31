@@ -1,68 +1,171 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import api from "../api/axios";
 
-export default function Suppliers() {
+function Suppliers() {
   const [suppliers, setSuppliers] = useState([]);
-  const [form, setForm] = useState({ name:"", contact:"", email:"" });
-  const [editingId, setEditingId] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const [formData, setFormData] = useState({
+    name: "",
+    company_name: "",
+    phone: "",
+    email: "",
+    address: "",
+  });
 
   const fetchSuppliers = async () => {
-    const res = await api.get("/suppliers/");
-    setSuppliers(res.data);
+    try {
+      const response = await api.get("/suppliers/");
+      setSuppliers(response.data);
+    } catch (error) {
+      console.error("Error fetching suppliers:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(()=>{ fetchSuppliers(); }, []);
+  useEffect(() => {
+    fetchSuppliers();
+  }, []);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if(editingId){
-      await api.put(`/suppliers/${editingId}/`, form);
-    } else {
-      const res = await api.post("/suppliers/", form);
-      setSuppliers([...suppliers, res.data]);
+
+    try {
+      await api.post("/suppliers/", formData);
+
+      setFormData({
+        name: "",
+        company_name: "",
+        phone: "",
+        email: "",
+        address: "",
+      });
+
+      fetchSuppliers();
+    } catch (error) {
+      console.error("Error adding supplier:", error);
+      alert("Failed to add supplier");
     }
-    setForm({ name:"", contact:"", email:"" });
-    setEditingId(null);
-  };
-
-  const handleEdit = (s) => {
-    setForm({ name:s.name, contact:s.contact, email:s.email });
-    setEditingId(s.id);
-  };
-
-  const handleDelete = async (id) => {
-    await api.delete(`/suppliers/${id}/`);
-    setSuppliers(suppliers.filter(s=>s.id!==id));
   };
 
   return (
-    <div className="page">
-      <h1>Suppliers</h1>
-      <form onSubmit={handleSubmit}>
-        <input placeholder="Name" value={form.name} onChange={e=>setForm({...form,name:e.target.value})} required/>
-        <input placeholder="Contact" value={form.contact} onChange={e=>setForm({...form,contact:e.target.value})} required/>
-        <input placeholder="Email" type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} required/>
-        <button>{editingId ? "Update":"Add"}</button>
-      </form>
+    <div className="page-container">
+      <h1 className="page-title">Suppliers</h1>
+      <p className="page-subtitle">Manage supplier contacts and company details.</p>
 
-      <table>
-        <thead>
-          <tr><th>Name</th><th>Contact</th><th>Email</th><th>Action</th></tr>
-        </thead>
-        <tbody>
-          {suppliers.map(s=>(
-            <tr key={s.id}>
-              <td>{s.name}</td>
-              <td>{s.contact}</td>
-              <td>{s.email}</td>
-              <td>
-                <button onClick={()=>handleEdit(s)}>Edit</button>
-                <button onClick={()=>handleDelete(s.id)}>Delete</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="form-card">
+        <h2 className="section-title">Add Supplier</h2>
+
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <input
+              type="text"
+              name="name"
+              placeholder="Supplier Name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+              className="form-input"
+            />
+          </div>
+
+          <div className="form-group">
+            <input
+              type="text"
+              name="company_name"
+              placeholder="Company Name"
+              value={formData.company_name}
+              onChange={handleChange}
+              className="form-input"
+            />
+          </div>
+
+          <div className="form-group">
+            <input
+              type="text"
+              name="phone"
+              placeholder="Phone"
+              value={formData.phone}
+              onChange={handleChange}
+              required
+              className="form-input"
+            />
+          </div>
+
+          <div className="form-group">
+            <input
+              type="email"
+              name="email"
+              placeholder="Email"
+              value={formData.email}
+              onChange={handleChange}
+              className="form-input"
+            />
+          </div>
+
+          <div className="form-group">
+            <textarea
+              name="address"
+              placeholder="Address"
+              value={formData.address}
+              onChange={handleChange}
+              className="form-textarea"
+            />
+          </div>
+
+          <button type="submit" className="primary-btn">
+            Add Supplier
+          </button>
+        </form>
+      </div>
+
+      <div className="table-card">
+        <h2 className="section-title">Supplier List</h2>
+
+        {loading ? (
+          <p>Loading suppliers...</p>
+        ) : suppliers.length === 0 ? (
+          <p>No suppliers found.</p>
+        ) : (
+          <div className="table-wrapper">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Company</th>
+                  <th>Phone</th>
+                  <th>Email</th>
+                  <th>Address</th>
+                </tr>
+              </thead>
+              <tbody>
+                {suppliers.map((supplier) => (
+                  <tr key={supplier.id}>
+                    <td>{supplier.id}</td>
+                    <td>{supplier.name}</td>
+                    <td>{supplier.company_name}</td>
+                    <td>{supplier.phone}</td>
+                    <td>{supplier.email}</td>
+                    <td>{supplier.address}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
+
+export default Suppliers;

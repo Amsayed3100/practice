@@ -1,71 +1,61 @@
 import React, { useEffect, useState } from "react";
-import api from "../api/axios"; // Mock API
-import { useAuth } from "../context/AuthContext";
+import api from "../api/axios";
 
-export default function Dashboard() {
-  const { user } = useAuth();
-  const [stats, setStats] = useState({
-    products: 0,
-    inventory: 0,
-    suppliers: 0,
-    purchases: 0,
-    expenses: 0,
-  });
+function Dashboard() {
+  const [summary, setSummary] = useState(null);
 
-  // Mock fetch counts
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchSummary = async () => {
       try {
-        const [productsRes, inventoryRes, suppliersRes, purchasesRes, expensesRes] = await Promise.all([
-          api.get("/products/"),
-          api.get("/inventory/"),
-          api.get("/suppliers/"),
-          api.get("/purchases/"),
-          api.get("/expenses/"),
-        ]);
-
-        setStats({
-          products: productsRes.data.length,
-          inventory: inventoryRes.data.length,
-          suppliers: suppliersRes.data.length,
-          purchases: purchasesRes.data.length,
-          expenses: expensesRes.data.length,
-        });
-      } catch (err) {
-        console.log("Error fetching dashboard stats", err);
+        const response = await api.get("/reports/dashboard/");
+        setSummary(response.data);
+      } catch (error) {
+        console.error("Error fetching dashboard summary:", error);
       }
     };
 
-    fetchStats();
+    fetchSummary();
   }, []);
 
   return (
-    <div className="page">
-      <h1>Welcome, {user?.username || "User"}!</h1>
-      <p>Manage your coffee shop operations efficiently.</p>
+    <div className="page-container">
+      <h1 className="page-title">Dashboard</h1>
+      <p className="page-subtitle">
+        Welcome to your Coffee Shop Management overview.
+      </p>
 
-      <div className="dashboard-cards">
-        <div className="card">
-          <h3>Products</h3>
-          <p>{stats.products} items</p>
+      {!summary ? (
+        <p>Loading dashboard...</p>
+      ) : (
+        <div className="card-grid">
+          <div className="summary-card">
+            <h3>Total Products</h3>
+            <p>{summary.total_products}</p>
+          </div>
+
+          <div className="summary-card">
+            <h3>Available Products</h3>
+            <p>{summary.available_products}</p>
+          </div>
+
+          <div className="summary-card">
+            <h3>Out of Stock</h3>
+            <p>{summary.out_of_stock_products}</p>
+          </div>
+
+          <div className="summary-card">
+            <h3>Low Stock</h3>
+            <p>{summary.low_stock_products}</p>
+          </div>
+
+          <div className="summary-card">
+            <h3>Total Categories</h3>
+            <p>{summary.total_categories}</p>
+          </div>
         </div>
-        <div className="card">
-          <h3>Inventory</h3>
-          <p>{stats.inventory} records</p>
-        </div>
-        <div className="card">
-          <h3>Suppliers</h3>
-          <p>{stats.suppliers} suppliers</p>
-        </div>
-        <div className="card">
-          <h3>Purchases</h3>
-          <p>{stats.purchases} transactions</p>
-        </div>
-        <div className="card">
-          <h3>Expenses</h3>
-          <p>{stats.expenses} records</p>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
+
+export default Dashboard;
