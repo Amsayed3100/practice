@@ -1,32 +1,72 @@
-import { createContext, useContext, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { createContext, useEffect, useState } from "react";
+import api from "../api/axios";
 
-const AuthContext = createContext();
+export const AuthContext = createContext();
 
-export function AuthProvider({ children }) {
+function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
 
-  const login = ({ username, password }) => {
-    // Mock login validation
-    if (username && password) { // এখানে তুমি চাইলে specific check করতে পারো
-      setUser({ username });
-      navigate("/dashboard"); // Login successful → Dashboard
-    } else {
-      alert("Enter username and password");
-    }
+  const login = async (username, password) => {
+    const response = await api.post("/accounts/login/", {
+      username,
+      password,
+    });
+
+    const { access, refresh } = response.data;
+
+    localStorage.setItem("access_token", access);
+    localStorage.setItem("refresh_token", refresh);
+
+    const profileResponse = await api.get("/accounts/profile/", {
+      headers: {
+        Authorization: `Bearer ${access}`,
+      },
+    });
+
+    setUser(profileResponse.data);
   };
 
   const logout = () => {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
     setUser(null);
-    navigate("/");
   };
 
+  const loadUser = async () => {
+    const token = localStorage.getItem("access_token");
+
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await api.get("/accounts/profile/", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setUser(response.data);
+    } catch (error) {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadUser();
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-export const useAuth = () => useContext(AuthContext);
+export default AuthProvider;
